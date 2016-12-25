@@ -68,6 +68,9 @@ archive_generator:
 
 tag_generator:
     per_page:
+
+plugins:
+    hexo-math
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
