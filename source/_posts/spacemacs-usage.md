@@ -10,21 +10,21 @@ Spacemacs是一份emacs的配置文件，想要使用它，你先要有emacs，�
 
 # 安装&使用
 ## Mac平台推荐安装Emacs的方法
-{% codeblock lang:shell %}
+```bash
 brew tap railwaycat/emacsmacport;
 brew install emacs-mac --with-spacemacs-icon --HEAD --with-gnutls
-{% endcodeblock%}
+```
 注意：--with-gnutls是用来支持ssl的
 
 ## 使用方法
 
-{% codeblock lang:shell %}
+```bash
 #clone spacemacs repo and use develop branch
 git clone https://github.com/syl20bnr/spacemacs.git ~/.emacs.d -b develop
 
 #clone zilongshanren layer and checkout develop branch
 git clone https://github.com/zilongshanren/spacemacs-private.git ~/.spacemacs.d/
-{% endcodeblock %}
+```
 
 详细的配置说明以及安装powershell支持，可以参考[spacemacs-private](https://github.com/zilongshanren/spacemacs-private)
 
