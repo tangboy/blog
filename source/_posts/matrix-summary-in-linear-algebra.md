@@ -1,5 +1,5 @@
 ---
-title: matrix_summary_in_linear_algebra
+title: 线性代数之各种各样的矩阵
 date: 2017-01-04 20:43:48
 tags:
      - matrix
@@ -12,17 +12,24 @@ tags:
 
 <!-- more -->
 ## 余子式、代数余子式、代数余子式矩阵 Minor、Cofactor、Cofactor Matrix
-[wiki](https://en.wikipedia.org/wiki/Minor_(linear_algebra))
 
 在wiki中**余子式**被叫做minor。minor不是一个独立的概念，当把一个方阵A中的第i行、第j列去掉后，剩余的元素组成的n-1阶方阵的行列式值，就是Minor。
 
-Minor的记号是: $M_{ij}$是一个行列式值。 而Cofactor(中文是叫代数余子式？)的记号是: $C_{ij}$, 公式是: $C_{ij} = (-1)^{i+j}M_{ij}$
+Minor的记号是: $M\_{ij}$是一个行列式值。 而Cofactor(中文是叫代数余子式？)的记号是: $C\_{ij}$, 公式是: $C\_{ij} = (-1)^{i+j}M\_{ij}$
 
 (个人建议，一切记法以wiki为准，抛弃国内中文教材的记法和中英对应关系吧，太容易混乱了)
 余子式矩阵Cofactor Matrix的定义：
-由方阵A的所有代数余子式$C_{ij}$组成的矩阵叫做余子式矩阵，记为C，公式为：
+由方阵A的所有代数余子式$C\_{ij}$组成的矩阵叫做余子式矩阵，记为C，公式为：
+
 $$
-C =  \left[ \begin{matrix} C_{11}&C_{12}&\ldots&C_{1n}\\ C_{21}&C_{22}&\ldots&C_{2n}\\ \vdots \ \ \ \ &\vdots \ \ \ \ &\vdots \ \ \ \ &\vdots \ \ \ \ \\ C_{n1}&C_{n2}&\ldots &C_{nn}\\ \end{matrix} \right]
+C =  \left[ 
+\begin{matrix} 
+C\_{11}&C\_{12}&\ldots&C\_{1n}\\\ 
+C\_{21}&C\_{22}&\ldots&C\_{2n}\\\
+\vdots  &\vdots  &\vdots  &\vdots \\\ 
+C\_{n1}&C\_{n2}&\ldots &C\_{nn}\\\ 
+\end{matrix} 
+\right]
 $$
 
 ## 伴随矩阵 Adjugate Matrix
@@ -102,7 +109,7 @@ $$
 [wiki](https://en.wikipedia.org/wiki/Normal_matrix)
 当矩阵A满足下面的等式时，A是规范化矩阵:
 $$
-A^{*}A = AA^{*}
+A^{\*}A = AA^{\*}
 $$
 $A^{*}$代表A的共轭转置矩阵
 
@@ -114,7 +121,11 @@ $A^{*}$代表A的共轭转置矩阵
 ## 格拉姆矩阵 Gramian matrix
 设矩阵X：
 $$
- X =  \left[ \begin{matrix} \vec X_{1}&\vec X_{2}&\cdots &\vec X_{n}\\ \end{matrix} \right]
+ X =  \left[ 
+ \begin{matrix} 
+ \vec X\_{1}&\vec X\_{2}&\cdots &\vec X\_{n}\\ 
+ \end{matrix} 
+ \right]
 $$
 
 则Gramian matrix为：
@@ -129,11 +140,11 @@ $$
 ## 协方差矩阵 Covariance matrix （或离差矩阵dispersion matrix）
 先给出协方差(covariance)公式：
 $$
-cov(X,Y) = \frac { \sum ^{n} _{i=1}(X_{i} - \overline {X})(Y_{i} - \overline {Y}) }{n-1} = E[(X - E[X])(Y - E[Y])]
+cov(X,Y) = \frac { \sum ^{n}\_{i=1}(X\_{i} - \overline {X})(Y\_{i} - \overline {Y}) }{n-1} = E[(X - E[X])(Y - E[Y])]
 $$
 
 协方差是一个测量2个变量关联性程度的方法。当变量数目多于2时，任意2个变量之间的协方差的集合就构成了协方差矩阵C：
 $$
-C = \Sigma _{ij} = cov(X_{i},X_{j}) = E[(X_{i} - E[X_{i}])(X_{j} - E[X_{j}])]
+C = \Sigma\_{ij} = cov(X\_{i},X\_{j}) = E[(X\_{i} - E[X\_{i}])(X\_{j} - E[X\_{j}])]
 $$
 {% asset_img matrix_4.png %}
