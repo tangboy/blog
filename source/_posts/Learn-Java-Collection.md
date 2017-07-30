@@ -1072,3 +1072,817 @@ HashSet(int initialCapacity, float loadFactor, boolean dummy) {
 * LinkedHashSet 是 Set 的一个具体实现，其维护着一个运行于所有条目的双重链接列表。此链接列表定义了迭代顺序，该迭代顺序可为插入顺序或是访问顺序。
 * inkedHashSet 继承与 HashSet，并且其内部是通过 LinkedHashMap 来实现的。有点类似于我们之前说的LinkedHashMap 其内部是基于 Hashmap 实现一样，不过还是有一点点区别的（具体的区别大家可以自己去思考一下）。
 * 如果我们需要迭代的顺序为插入顺序或者访问顺序，那么 LinkedHashSet 是需要你首先考虑的。
+
+# ArrayList 的实现原理
+## ArrayList 概述
+ArrayList 可以理解为动态数组，用 MSDN 中的说法，就是 Array 的复杂版本。与 Java 中的数组相比，它的容量能动态增长。ArrayList 是 List 接口的可变数组的实现。实现了所有可选列表操作，并允许包括 null 在内的所有元素。除了实现 List 接口外，此类还提供一些方法来操作内部用来存储列表的数组的大小。（此类大致上等同于 Vector 类，除了此类是不同步的。）
+
+每个 ArrayList 实例都有一个容量，该容量是指用来存储列表元素的数组的大小。它总是至少等于列表的大小。随着向 ArrayList 中不断添加元素，其容量也自动增长。自动增长会带来数据向新数组的重新拷贝，因此，如果可预知数据量的多少，可在构造 ArrayList 时指定其容量。在添加大量元素前，应用程序也可以使用 ensureCapacity 操作来增加 ArrayList 实例的容量，这可以减少递增式再分配的数量。
+
+注意，此实现不是同步的。如果多个线程同时访问一个 ArrayList 实例，而其中至少一个线程从结构上修改了列表，那么它必须保持外部同步。（结构上的修改是指任何添加或删除一个或多个元素的操作，或者显式调整底层数组的大小；仅仅设置元素的值不是结构上的修改。）
+
+我们先学习了解其内部的实现原理，才能更好的理解其应用。
+
+## ArrayList 的实现
+对于 ArrayList 而言，它实现 List 接口、底层使用数组保存所有元素。其操作基本上是对数组的操作。下面我们来分析 ArrayList 的源代码：
+### 实现的接口
+```java
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable
+{
+}
+```
+
+ArrayList 继承了 AbstractList，实现了 List。它是一个数组队列，提供了相关的添加、删除、修改、遍历等功能。
+
+ArrayList 实现了 RandmoAccess 接口，即提供了随机访问功能。RandmoAccess 是 java 中用来被 List 实现，为 List 提供快速访问功能的。在 ArrayList 中，我们即可以通过元素的序号快速获取元素对象；这就是快速随机访问。
+
+ArrayList 实现了 Cloneable 接口，即覆盖了函数 clone()，能被克隆。 ArrayList 实现 java.io.Serializable 接口，这意味着 ArrayList 支持序列化，能通过序列化去传输。
+
+
+### 底层使用数组实现
+```java
+/**
+* The array buffer into which the elements of the ArrayList are stored.
+* The capacity of the ArrayList is the length of this array buffer.
+*/
+private transient Object[] elementData;
+```
+
+### 构造方法
+```java
+/**
+     * Constructs an empty list with an initial capacity of ten.
+     */
+    public ArrayList() {
+        this(10);
+    }
+    /**
+     * Constructs an empty list with the specified initial capacity.
+     *
+     * @param  initialCapacity  the initial capacity of the list
+     * @throws IllegalArgumentException if the specified initial capacity
+     *         is negative
+     */
+    public ArrayList(int initialCapacity) {
+        super();
+        if (initialCapacity < 0)
+            throw new IllegalArgumentException("Illegal Capacity: "+
+                                               initialCapacity);
+        this.elementData = new Object[initialCapacity];
+    }
+
+    /**
+     * Constructs a list containing the elements of the specified
+     * collection, in the order they are returned by the collection's
+     * iterator.
+     *
+     * @param c the collection whose elements are to be placed into this list
+     * @throws NullPointerException if the specified collection is null
+     */
+    public ArrayList(Collection<? extends E> c) {
+        elementData = c.toArray();
+        size = elementData.length;
+        // c.toArray might (incorrectly) not return Object[] (see 6260652)
+        if (elementData.getClass() != Object[].class)
+            elementData = Arrays.copyOf(elementData, size, Object[].class);
+    }
+```
+ArrayList 提供了三种方式的构造器：
+1. `public ArrayList()`可以构造一个默认初始容量为10的空列表；
+2. `public ArrayList(int initialCapacity)`构造一个指定初始容量的空列表；
+3. `public ArrayList(Collection<? extends E> c)`构造一个包含指定 collection 的元素的列表，这些元素按照该collection的迭代器返回它们的顺序排列的。
+
+### 存储
+ArrayList 中提供了多种添加元素的方法，下面将一一进行讲解：
+
+1. `set(int index, E element)`：该方法首先调用rangeCheck(index)来校验 index 变量是否超出数组范围，超出则抛出异常。而后，取出原 index 位置的值，并且将新的 element 放入 Index 位置，返回 oldValue。
+```java
+/**
+     * Replaces the element at the specified position in this list with
+     * the specified element.
+     *
+     * @param index index of the element to replace
+     * @param element element to be stored at the specified position
+     * @return the element previously at the specified position
+     * @throws IndexOutOfBoundsException {@inheritDoc}
+     */
+    public E set(int index, E element) {
+        rangeCheck(index);
+
+        E oldValue = elementData(index);
+        elementData[index] = element;
+        return oldValue;
+    }
+    /**
+      * Checks if the given index is in range.  If not, throws an appropriate
+      * runtime exception.  This method does *not* check if the index is
+      * negative: It is always used immediately prior to an array access,
+      * which throws an ArrayIndexOutOfBoundsException if index is negative.
+      */
+      private void rangeCheck(int index) {
+        if (index >= size)
+        throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+      }
+```
+
+2. `add(E e)`：该方法是将指定的元素添加到列表的尾部。当容量不足时，会调用 grow 方法增长容量。
+```java
+/**
+     * Appends the specified element to the end of this list.
+     *
+     * @param e element to be appended to this list
+     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     */
+    public boolean add(E e) {
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        elementData[size++] = e;
+        return true;
+    }
+    private void ensureCapacityInternal(int minCapacity) {
+        modCount++;
+        // overflow-conscious code
+        if (minCapacity - elementData.length > 0)
+            grow(minCapacity);
+    }
+    private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+```
+
+3. `add(int index, E element)`：在 index 位置插入 element。
+```java
+/**
+    * Inserts the specified element at the specified position in this
+    * list. Shifts the element currently at that position (if any) and
+    * any subsequent elements to the right (adds one to their indices).
+    *
+    * @param index index at which the specified element is to be inserted
+    * @param element element to be inserted
+    * @throws IndexOutOfBoundsException {@inheritDoc}
+    */
+   public void add(int index, E element) {
+       rangeCheckForAdd(index);
+
+       ensureCapacityInternal(size + 1);  // Increments modCount!!
+       System.arraycopy(elementData, index, elementData, index + 1,
+                        size - index);
+       elementData[index] = element;
+       size++;
+   }
+```
+
+4. `addAll(Collection<? extends E> c)` 和 `addAll(int index, Collection<? extends E> c)`：将特定 Collection 中的元素添加到 Arraylist 末尾。
+```java
+/**
+     * Appends all of the elements in the specified collection to the end of
+     * this list, in the order that they are returned by the
+     * specified collection's Iterator.  The behavior of this operation is
+     * undefined if the specified collection is modified while the operation
+     * is in progress.  (This implies that the behavior of this call is
+     * undefined if the specified collection is this list, and this
+     * list is nonempty.)
+     *
+     * @param c collection containing elements to be added to this list
+     * @return <tt>true</tt> if this list changed as a result of the call
+     * @throws NullPointerException if the specified collection is null
+     */
+    public boolean addAll(Collection<? extends E> c) {
+        Object[] a = c.toArray();
+        int numNew = a.length;
+        ensureCapacityInternal(size + numNew);  // Increments modCount
+        System.arraycopy(a, 0, elementData, size, numNew);
+        size += numNew;
+        return numNew != 0;
+    }
+
+    /**
+     * Inserts all of the elements in the specified collection into this
+     * list, starting at the specified position.  Shifts the element
+     * currently at that position (if any) and any subsequent elements to
+     * the right (increases their indices).  The new elements will appear
+     * in the list in the order that they are returned by the
+     * specified collection's iterator.
+     *
+     * @param index index at which to insert the first element from the
+     *              specified collection
+     * @param c collection containing elements to be added to this list
+     * @return <tt>true</tt> if this list changed as a result of the call
+     * @throws IndexOutOfBoundsException {@inheritDoc}
+     * @throws NullPointerException if the specified collection is null
+     */
+    public boolean addAll(int index, Collection<? extends E> c) {
+        rangeCheckForAdd(index);
+
+        Object[] a = c.toArray();
+        int numNew = a.length;
+        ensureCapacityInternal(size + numNew);  // Increments modCount
+
+        int numMoved = size - index;
+        if (numMoved > 0)
+            System.arraycopy(elementData, index, elementData, index + numNew,
+                             numMoved);
+
+        System.arraycopy(a, 0, elementData, index, numNew);
+        size += numNew;
+        return numNew != 0;
+    }
+```
+
+在 ArrayList 的存储方法，其核心本质是在数组的某个位置将元素添加进入。但其中又会涉及到关于数组容量不够而增长等因素。
+
+### 读取
+这个方法就比较简单了，ArrayList 能够支持随机访问的原因也是很显然的，因为它内部的数据结构是数组，而数组本身就是支持随机访问。该方法首先会判断输入的index值是否越界，然后将数组的 index 位置的元素返回即可。
+
+```java
+/**
+* Returns the element at the specified position in this list.
+*
+* @param  index index of the element to return
+* @return the element at the specified position in this list
+* @throws IndexOutOfBoundsException {@inheritDoc}
+*/
+public E get(int index) {
+    rangeCheck(index);
+    return (E) elementData[index];
+}
+private void rangeCheck(int index) {
+    if (index >= size)
+    throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+}
+```
+
+### 删除
+ArrayList 提供了根据下标或者指定对象两种方式的删除功能。需要注意的是该方法的返回值并不相同，如下：
+```java
+/**
+     * Removes the element at the specified position in this list.
+     * Shifts any subsequent elements to the left (subtracts one from their
+     * indices).
+     *
+     * @param index the index of the element to be removed
+     * @return the element that was removed from the list
+     * @throws IndexOutOfBoundsException {@inheritDoc}
+     */
+    public E remove(int index) {
+        rangeCheck(index);
+
+        modCount++;
+        E oldValue = elementData(index);
+
+        int numMoved = size - index - 1;
+        if (numMoved > 0)
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        elementData[--size] = null; // Let gc do its work
+
+        return oldValue;
+    }
+/**
+     * Removes the first occurrence of the specified element from this list,
+     * if it is present.  If the list does not contain the element, it is
+     * unchanged.  More formally, removes the element with the lowest index
+     * <tt>i</tt> such that
+     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>
+     * (if such an element exists).  Returns <tt>true</tt> if this list
+     * contained the specified element (or equivalently, if this list
+     * changed as a result of the call).
+     *
+     * @param o element to be removed from this list, if present
+     * @return <tt>true</tt> if this list contained the specified element
+     */
+    public boolean remove(Object o) {
+        if (o == null) {
+            for (int index = 0; index < size; index++)
+                if (elementData[index] == null) {
+                    fastRemove(index);
+                    return true;
+                }
+        } else {
+            for (int index = 0; index < size; index++)
+                if (o.equals(elementData[index])) {
+                    fastRemove(index);
+                    return true;
+                }
+        }
+        return false;
+    }
+```
+注意：从数组中移除元素的操作，也会导致被移除的元素以后的所有元素的向左移动一个位置。
+
+### 调整数组容量
+从上面介绍的向 ArrayList 中存储元素的代码中，我们看到，每当向数组中添加元素时，都要去检查添加后元素的个数是否会超出当前数组的长度，如果超出，数组将会进行扩容，以满足添加数据的需求。数组扩容有两个方法，其中开发者可以通过一个 public 的方法`ensureCapacity(int minCapacity)`来增加 ArrayList 的容量，而在存储元素等操作过程中，如果遇到容量不足，会调用private方法`private void ensureCapacityInternal(int minCapacity)`实现。
+
+```java
+public void ensureCapacity(int minCapacity) {
+        if (minCapacity > 0)
+            ensureCapacityInternal(minCapacity);
+    }
+
+    private void ensureCapacityInternal(int minCapacity) {
+        modCount++;
+        // overflow-conscious code
+        if (minCapacity - elementData.length > 0)
+            grow(minCapacity);
+    }
+    /**
+     * Increases the capacity to ensure that it can hold at least the
+     * number of elements specified by the minimum capacity argument.
+     *
+     * @param minCapacity the desired minimum capacity
+     */
+    private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        // minCapacity is usually close to size, so this is a win:
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+```
+
+从上述代码中可以看出，数组进行扩容时，会将老数组中的元素重新拷贝一份到新的数组中，每次数组容量的增长大约是其原容量的 1.5 倍（从`int newCapacity = oldCapacity + (oldCapacity >> 1)`这行代码得出）。这种操作的代价是很高的，因此在实际使用时，我们应该尽量避免数组容量的扩张。当我们可预知要保存的元素的多少时，要在构造 ArrayList 实例时，就指定其容量，以避免数组扩容的发生。或者根据实际需求，通过调用ensureCapacity 方法来手动增加 ArrayList 实例的容量。
+
+## Fail-Fast 机制
+
+ArrayList 也采用了快速失败的机制，通过记录 modCount 参数来实现。在面对并发的修改时，迭代器很快就会完全失败，而不是冒着在将来某个不确定时间发生任意不确定行为的风险。 关于 Fail-Fast 的更详细的介绍，我在之前将 HashMap 中已经提到。
+
+# LinkedList 的实现原理
+## 概述
+LinkedList 和 ArrayList 一样，都实现了 List 接口，但其内部的数据结构有本质的不同。LinkedList 是基于链表实现的（通过名字也能区分开来），所以它的插入和删除操作比 ArrayList 更加高效。但也是由于其为基于链表的，所以随机访问的效率要比 ArrayList 差。
+
+看一下 LinkedList 的类的定义：
+```java
+public class LinkedList<E>
+    extends AbstractSequentialList<E>
+    implements List<E>, Deque<E>, Cloneable, java.io.Serializable
+{}
+```
+
+LinkedList 继承自 AbstractSequenceList，实现了 List、Deque、Cloneable、java.io.Serializable 接口。AbstractSequenceList 提供了List接口骨干性的实现以减少实现 List 接口的复杂度，Deque 接口定义了双端队列的操作。
+
+在 LinkedList 中除了本身自己的方法外，还提供了一些可以使其作为栈、队列或者双端队列的方法。这些方法可能彼此之间只是名字不同，以使得这些名字在特定的环境中显得更加合适。
+
+LinkedList 也是 fail-fast 的（前边提过很多次了）。
+
+## LinkedList 源码解读
+### 数据结构
+LinkedList 是基于链表结构实现，所以在类中包含了 first 和 last 两个指针(Node)。Node 中包含了上一个节点和下一个节点的引用，这样就构成了双向的链表。每个 Node 只能知道自己的前一个节点和后一个节点，但对于链表来说，这已经足够了。
+```java
+transient int size = 0;
+  transient Node<E> first; //链表的头指针
+  transient Node<E> last; //尾指针
+  //存储对象的结构 Node, LinkedList的内部类
+  private static class Node<E> {
+      E item;
+      Node<E> next; // 指向下一个节点
+      Node<E> prev; //指向上一个节点
+
+      Node(Node<E> prev, E element, Node<E> next) {
+          this.item = element;
+          this.next = next;
+          this.prev = prev;
+      }
+  }
+```
+
+### 存储
+`add(E e)`
+
+该方法是在链表的 end 添加元素，其调用了自己的方法 linkLast(E e)。
+
+该方法首先将 last 的 Node 引用指向了一个新的 Node(l)，然后根据l新建了一个 newNode，其中的元素就为要添加的 e；而后，我们让 last 指向了 newNode。接下来是自身进行维护该链表。
+```java
+/**
+     * Appends the specified element to the end of this list.
+     *
+     * <p>This method is equivalent to {@link #addLast}.
+     *
+     * @param e element to be appended to this list
+     * @return {@code true} (as specified by {@link Collection#add})
+     */
+public boolean add(E e) {
+    linkLast(e);
+    return true;
+}
+/**
+* Links e as last element.
+*/
+void linkLast(E e) {
+    final Node<E> l = last;
+    final Node<E> newNode = new Node<>(l, e, null);
+    last = newNode;
+    if (l == null)
+        first = newNode;
+    else
+        l.next = newNode;
+    size++;
+    modCount++;
+}
+```
+
+`add(int index, E element)`
+
+该方法是在指定 index 位置插入元素。如果 index 位置正好等于 size，则调用 linkLast(element) 将其插入末尾；否则调用 linkBefore(element, node(index))方法进行插入。该方法的实现在下面，大家可以自己仔细的分析一下。（分析链表的时候最好能够边画图边分析）
+
+
+```java
+/**
+    * Inserts the specified element at the specified position in this list.
+    * Shifts the element currently at that position (if any) and any
+    * subsequent elements to the right (adds one to their indices).
+    *
+    * @param index index at which the specified element is to be inserted
+    * @param element element to be inserted
+    * @throws IndexOutOfBoundsException {@inheritDoc}
+    */
+   public void add(int index, E element) {
+       checkPositionIndex(index);
+
+       if (index == size)
+           linkLast(element);
+       else
+           linkBefore(element, node(index));
+   }
+   /**
+        * Inserts element e before non-null Node succ.
+        */
+       void linkBefore(E e, Node<E> succ) {
+           // assert succ != null;
+           final Node<E> pred = succ.prev;
+           final Node<E> newNode = new Node<>(pred, e, succ);
+           succ.prev = newNode;
+           if (pred == null)
+               first = newNode;
+           else
+               pred.next = newNode;
+           size++;
+           modCount++;
+       }
+```
+LinkedList 的方法实在是太多，在这没法一一举例分析。但很多方法其实都只是在调用别的方法而已，所以建议大家将其几个最核心的添加的方法搞懂就可以了，比如 linkBefore、linkLast。其本质也就是链表之间的删除添加等。
+
+
+# ConcurrentHashMap 的实现原理
+## 概述
+我们在之前的博文中了解到关于 HashMap 和 Hashtable 这两种集合。其中 HashMap 是非线程安全的，当我们只有一个线程在使用 HashMap 的时候，自然不会有问题，但如果涉及到多个线程，并且有读有写的过程中，HashMap 就不能满足我们的需要了(fail-fast)。在不考虑性能问题的时候，我们的解决方案有 Hashtable 或者Collections.synchronizedMap(hashMap)，这两种方式基本都是对整个 hash 表结构做锁定操作的，这样在锁表的期间，别的线程就需要等待了，无疑性能不高。
+
+所以我们在本文中学习一个 util.concurrent 包的重要成员，ConcurrentHashMap。
+
+ConcurrentHashMap 的实现是依赖于 Java 内存模型，所以我们在了解 ConcurrentHashMap 的前提是必须了解Java 内存模型。但 Java 内存模型并不是本文的重点，所以我假设读者已经对 Java 内存模型有所了解。
+
+## ConcurrentHashMap 分析
+```java
+ConcurrentHashMap 的结构是比较复杂的，都深究去本质，其实也就是数组和链表而已。我们由浅入深慢慢的分析其结构。
+
+先简单分析一下，ConcurrentHashMap 的成员变量中，包含了一个 Segment 的数组（`final Segment<K,V>[] segments`;），而 Segment 是 ConcurrentHashMap 的内部类，然后在 Segment 这个类中，包含了一个 HashEntry 的数组（`transient volatile HashEntry<K,V>[] table`;）。而 HashEntry 也是 ConcurrentHashMap 的内部类。HashEntry 中，包含了 key 和 value 以及 next 指针（类似于 HashMap 中 Entry），所以 HashEntry 可以构成一个链表。
+
+所以通俗的讲，ConcurrentHashMap 数据结构为一个 Segment 数组，Segment 的数据结构为 HashEntry 的数组，而 HashEntry 存的是我们的键值对，可以构成链表。
+
+首先，我们看一下 HashEntry 类。
+```       
+### HashEntry
+HashEntry 用来封装散列映射表中的键值对。在 HashEntry 类中，key，hash 和 next 域都被声明为 final 型，value 域被声明为 volatile 型。其类的定义为：
+```java
+static final class HashEntry<K,V> {
+        final int hash;
+        final K key;
+        volatile V value;
+        volatile HashEntry<K,V> next;
+
+        HashEntry(int hash, K key, V value, HashEntry<K,V> next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+        ...
+        ...
+}
+```
+HashEntry 的学习可以类比着 HashMap 中的 Entry。我们的存储键值对的过程中，散列的时候如果发生“碰撞”，将采用“分离链表法”来处理碰撞：把碰撞的 HashEntry 对象链接成一个链表。
+
+如下图，我们在一个空桶中插入 A、B、C 两个 HashEntry 对象后的结构图（其实应该为键值对，在这进行了简化以方便更容易理解）：
+{%asset_img concurrenthashmap1.jpg %}
+
+### Segment
+Segment 的类定义为`static final class Segment<K,V> extends ReentrantLock implements Serializable`。其继承于 ReentrantLock 类，从而使得 Segment 对象可以充当锁的角色。Segment 中包含HashEntry 的数组，其可以守护其包含的若干个桶（HashEntry的数组）。Segment 在某些意义上有点类似于 HashMap了，都是包含了一个数组，而数组中的元素可以是一个链表。
+
+table:table 是由 HashEntry 对象组成的数组如果散列时发生碰撞，碰撞的 HashEntry 对象就以链表的形式链接成一个链表table数组的数组成员代表散列映射表的一个桶每个 table 守护整个 ConcurrentHashMap 包含桶总数的一部分如果并发级别为 16，table 则守护 ConcurrentHashMap 包含的桶总数的 1/16。
+
+count 变量是计算器，表示每个 Segment 对象管理的 table 数组（若干个 HashEntry 的链表）包含的HashEntry 对象的个数。之所以在每个Segment对象中包含一个 count 计数器，而不在 ConcurrentHashMap 中使用全局的计数器，是为了避免出现“热点域”而影响并发性。
+
+```java
+/**
+     * Segments are specialized versions of hash tables.  This
+     * subclasses from ReentrantLock opportunistically, just to
+     * simplify some locking and avoid separate construction.
+     */
+    static final class Segment<K,V> extends ReentrantLock implements Serializable {
+      /**
+         * The per-segment table. Elements are accessed via
+         * entryAt/setEntryAt providing volatile semantics.
+         */
+        transient volatile HashEntry<K,V>[] table;
+
+        /**
+         * The number of elements. Accessed only either within locks
+         * or among other volatile reads that maintain visibility.
+         */
+        transient int count;
+        transient int modCount;
+        /**
+         * 装载因子
+         */
+        final float loadFactor;
+    }
+```
+
+我们通过下图来展示一下插入 ABC 三个节点后，Segment 的示意图：
+{%asset_img concurrenthashmap2.jpg %}
+
+其实从我个人角度来说，Segment结构是与HashMap很像的.
+
+### ConcurrentHashMap
+ConcurrentHashMap 的结构中包含的 Segment 的数组，在默认的并发级别会创建包含 16 个 Segment 对象的数组。通过我们上面的知识，我们知道每个 Segment 又包含若干个散列表的桶，每个桶是由 HashEntry 链接起来的一个链表。如果 key 能够均匀散列，每个 Segment 大约守护整个散列表桶总数的 1/16。
+
+下面我们还有通过一个图来演示一下 ConcurrentHashMap 的结构：
+{%asset_img concurrenthashmap3.jpg %}
+
+### 并发写操作
+在 ConcurrentHashMap 中，当执行 put 方法的时候，会需要加锁来完成。我们通过代码来解释一下具体过程： 当我们 new 一个 ConcurrentHashMap 对象，并且执行put操作的时候，首先会执行 ConcurrentHashMap 类中的 put 方法，该方法源码为：
+```java
+/**
+     * Maps the specified key to the specified value in this table.
+     * Neither the key nor the value can be null.
+     *
+     * <p> The value can be retrieved by calling the <tt>get</tt> method
+     * with a key that is equal to the original key.
+     *
+     * @param key key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @return the previous value associated with <tt>key</tt>, or
+     *         <tt>null</tt> if there was no mapping for <tt>key</tt>
+     * @throws NullPointerException if the specified key or value is null
+     */
+    @SuppressWarnings("unchecked")
+    public V put(K key, V value) {
+        Segment<K,V> s;
+        if (value == null)
+            throw new NullPointerException();
+        int hash = hash(key);
+        int j = (hash >>> segmentShift) & segmentMask;
+        if ((s = (Segment<K,V>)UNSAFE.getObject          // nonvolatile; recheck
+             (segments, (j << SSHIFT) + SBASE)) == null) //  in ensureSegment
+            s = ensureSegment(j);
+        return s.put(key, hash, value, false);
+    }
+```
+
+我们通过注释可以了解到，ConcurrentHashMap 不允许空值。该方法首先有一个 Segment 的引用 s，然后会通过 hash() 方法对 key 进行计算，得到哈希值；继而通过调用 Segment 的 put(K key, int hash, V value, boolean onlyIfAbsent)方法进行存储操作。该方法源码为：
+```java
+final V put(K key, int hash, V value, boolean onlyIfAbsent) {
+    //加锁，这里是锁定的Segment而不是整个ConcurrentHashMap
+    HashEntry<K,V> node = tryLock() ? null :scanAndLockForPut(key, hash, value);
+    V oldValue;
+    try {
+        HashEntry<K,V>[] tab = table;
+        //得到hash对应的table中的索引index
+        int index = (tab.length - 1) & hash;
+        //找到hash对应的是具体的哪个桶，也就是哪个HashEntry链表
+        HashEntry<K,V> first = entryAt(tab, index);
+        for (HashEntry<K,V> e = first;;) {
+            if (e != null) {
+                K k;
+                if ((k = e.key) == key ||
+                    (e.hash == hash && key.equals(k))) {
+                    oldValue = e.value;
+                    if (!onlyIfAbsent) {
+                        e.value = value;
+                        ++modCount;
+                    }
+                    break;
+                }
+                e = e.next;
+            }
+            else {
+                if (node != null)
+                    node.setNext(first);
+                else
+                    node = new HashEntry<K,V>(hash, key, value, first);
+                int c = count + 1;
+                if (c > threshold && tab.length < MAXIMUM_CAPACITY)
+                    rehash(node);
+                else
+                    setEntryAt(tab, index, node);
+                ++modCount;
+                count = c;
+                oldValue = null;
+                break;
+            }
+        }
+    } finally {
+        //解锁
+        unlock();
+    }
+    return oldValue;
+}
+```
+
+关于该方法的某些关键步骤，在源码上加上了注释。
+
+需要注意的是：加锁操作是针对的 hash 值对应的某个 Segment，而不是整个 ConcurrentHashMap。因为 put 操作只是在这个 Segment 中完成，所以并不需要对整个 ConcurrentHashMap 加锁。所以，此时，其他的线程也可以对另外的 Segment 进行 put 操作，因为虽然该 Segment 被锁住了，但其他的 Segment 并没有加锁。同时，读线程并不会因为本线程的加锁而阻塞。
+
+正是因为其内部的结构以及机制，所以 ConcurrentHashMap 在并发访问的性能上要比Hashtable和同步包装之后的HashMap的性能提高很多。在理想状态下，ConcurrentHashMap 可以支持 16 个线程执行并发写操作（如果并发级别设置为 16），及任意数量线程的读操作。
+
+## 总结
+在实际的应用中，散列表一般的应用场景是：除了少数插入操作和删除操作外，绝大多数都是读取操作，而且读操作在大多数时候都是成功的。正是基于这个前提，ConcurrentHashMap 针对读操作做了大量的优化。通过 HashEntry 对象的不变性和用 volatile 型变量协调线程间的内存可见性，使得 大多数时候，读操作不需要加锁就可以正确获得值。这个特性使得 ConcurrentHashMap 的并发性能在分离锁的基础上又有了近一步的提高。
+
+ConcurrentHashMap 是一个并发散列映射表的实现，它允许完全并发的读取，并且支持给定数量的并发更新。相比于 HashTable 和用同步包装器包装的 HashMap（Collections.synchronizedMap(new HashMap())），ConcurrentHashMap 拥有更高的并发性。在 HashTable 和由同步包装器包装的 HashMap 中，使用一个全局的锁来同步不同线程间的并发访问。同一时间点，只能有一个线程持有锁，也就是说在同一时间点，只能有一个线程能访问容器。这虽然保证多线程间的安全并发访问，但同时也导致对容器的访问变成串行化的了。
+
+ConcurrentHashMap 的高并发性主要来自于三个方面：
+
+用分离锁实现多个线程间的更深层次的共享访问。
+- 用 HashEntery 对象的不变性来降低执行读操作的线程在遍历链表期间对加锁的需求。
+- 通过对同一个 Volatile 变量的写 / 读访问，协调不同线程间读 / 写操作的内存可见性。
+- 使用分离锁，减小了请求 同一个锁的频率。
+
+通过 HashEntery 对象的不变性及对同一个 Volatile 变量的读 / 写来协调内存可见性，使得 读操作大多数时候不需要加锁就能成功获取到需要的值。由于散列映射表在实际应用中大多数操作都是成功的 读操作，所以 2 和 3 既可以减少请求同一个锁的频率，也可以有效减少持有锁的时间。通过减小请求同一个锁的频率和尽量减少持有锁的时间 ，使得 ConcurrentHashMap 的并发性相对于 HashTable 和用同步包装器包装的 HashMap有了质的提高。
+
+
+# LinkedHashMap 与 LRUcache
+## LRU 缓存介绍
+我们平时总会有一个电话本记录所有朋友的电话，但是，如果有朋友经常联系，那些朋友的电话号码不用翻电话本我们也能记住，但是，如果长时间没有联系了，要再次联系那位朋友的时候，我们又不得不求助电话本，但是，通过电话本查找还是很费时间的。但是，我们大脑能够记住的东西是一定的，我们只能记住自己最熟悉的，而长时间不熟悉的自然就忘记了。
+
+其实，计算机也用到了同样的一个概念，我们用缓存来存放以前读取的数据，而不是直接丢掉，这样，再次读取的时候，可以直接在缓存里面取，而不用再重新查找一遍，这样系统的反应能力会有很大提高。但是，当我们读取的个数特别大的时候，我们不可能把所有已经读取的数据都放在缓存里，毕竟内存大小是一定的，我们一般把最近常读取的放在缓存里（相当于我们把最近联系的朋友的姓名和电话放在大脑里一样）。
+
+LRU 缓存利用了这样的一种思想。LRU 是 Least Recently Used 的缩写，翻译过来就是“最近最少使用”，也就是说，LRU 缓存把最近最少使用的数据移除，让给最新读取的数据。而往往最常读取的，也是读取次数最多的，所以，利用 LRU 缓存，我们能够提高系统的 performance。
+
+## 实现
+要实现 LRU 缓存，我们首先要用到一个类 LinkedHashMap。
+
+用这个类有两大好处：一是它本身已经实现了按照访问顺序的存储，也就是说，最近读取的会放在最前面，最最不常读取的会放在最后（当然，它也可以实现按照插入顺序存储）。第二，LinkedHashMap 本身有一个方法用于判断是否需要移除最不常读取的数，但是，原始方法默认不需要移除（这是，LinkedHashMap 相当于一个linkedlist），所以，我们需要 override 这样一个方法，使得当缓存里存放的数据个数超过规定个数后，就把最不常用的移除掉。关于 LinkedHashMap 中已经有详细的介绍。
+```java
+import java.util.LinkedHashMap;
+import java.util.Collection;
+import java.util.Map;
+import java.util.ArrayList;
+
+/**
+ * An LRU cache, based on <code>LinkedHashMap</code>.
+ *
+ * <p>
+ * This cache has a fixed maximum number of elements (<code>cacheSize</code>).
+ * If the cache is full and another entry is added, the LRU (least recently
+ * used) entry is dropped.
+ *
+ * <p>
+ * This class is thread-safe. All methods of this class are synchronized.
+ *
+ * <p>
+ * Author: Christian d'Heureuse, Inventec Informatik AG, Zurich, Switzerland<br>
+ * Multi-licensed: EPL / LGPL / GPL / AL / BSD.
+ */
+public class LRUCache<K, V> {
+    private static final float hashTableLoadFactor = 0.75f;
+    private LinkedHashMap<K, V> map;
+    private int cacheSize;
+
+    /**
+     * Creates a new LRU cache. 在该方法中，new LinkedHashMap<K,V>(hashTableCapacity,
+     * hashTableLoadFactor, true)中，true代表使用访问顺序
+     *
+     * @param cacheSize
+     *            the maximum number of entries that will be kept in this cache.
+     */
+    public LRUCache(int cacheSize) {
+        this.cacheSize = cacheSize;
+        int hashTableCapacity = (int) Math
+                .ceil(cacheSize / hashTableLoadFactor) + 1;
+        map = new LinkedHashMap<K, V>(hashTableCapacity, hashTableLoadFactor,
+                true) {
+            // (an anonymous inner class)
+            private static final long serialVersionUID = 1;
+
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > LRUCache.this.cacheSize;
+            }
+        };
+    }
+
+    /**
+     * Retrieves an entry from the cache.<br>
+     * The retrieved entry becomes the MRU (most recently used) entry.
+     *
+     * @param key
+     *            the key whose associated value is to be returned.
+     * @return the value associated to this key, or null if no value with this
+     *         key exists in the cache.
+     */
+    public synchronized V get(K key) {
+        return map.get(key);
+    }
+
+    /**
+     * Adds an entry to this cache. The new entry becomes the MRU (most recently
+     * used) entry. If an entry with the specified key already exists in the
+     * cache, it is replaced by the new entry. If the cache is full, the LRU
+     * (least recently used) entry is removed from the cache.
+     *
+     * @param key
+     *            the key with which the specified value is to be associated.
+     * @param value
+     *            a value to be associated with the specified key.
+     */
+    public synchronized void put(K key, V value) {
+        map.put(key, value);
+    }
+
+    /**
+     * Clears the cache.
+     */
+    public synchronized void clear() {
+        map.clear();
+    }
+
+    /**
+     * Returns the number of used entries in the cache.
+     *
+     * @return the number of entries currently in the cache.
+     */
+    public synchronized int usedEntries() {
+        return map.size();
+    }
+
+    /**
+     * Returns a <code>Collection</code> that contains a copy of all cache
+     * entries.
+     *
+     * @return a <code>Collection</code> with a copy of the cache content.
+     */
+    public synchronized Collection<Map.Entry<K, V>> getAll() {
+        return new ArrayList<Map.Entry<K, V>>(map.entrySet());
+    }
+
+    // Test routine for the LRUCache class.
+    public static void main(String[] args) {
+        LRUCache<String, String> c = new LRUCache<String, String>(3);
+        c.put("1", "one"); // 1
+        c.put("2", "two"); // 2 1
+        c.put("3", "three"); // 3 2 1
+        c.put("4", "four"); // 4 3 2
+        if (c.get("2") == null)
+            throw new Error(); // 2 4 3
+        c.put("5", "five"); // 5 2 4
+        c.put("4", "second four"); // 4 5 2
+        // Verify cache content.
+        if (c.usedEntries() != 3)
+            throw new Error();
+        if (!c.get("4").equals("second four"))
+            throw new Error();
+        if (!c.get("5").equals("five"))
+            throw new Error();
+        if (!c.get("2").equals("two"))
+            throw new Error();
+        // List cache content.
+        for (Map.Entry<String, String> e : c.getAll())
+            System.out.println(e.getKey() + " : " + e.getValue());
+    }
+}
+```
+
+# HashSet 和 HashMap 的比较
+HashMap 和 HashSet 都是 collection 框架的一部分，它们让我们能够使用对象的集合。collection 框架有自己的接口和实现，主要分为 Set 接口，List 接口和 Queue 接口。它们有各自的特点，Set 的集合里不允许对象有重复的值，List 允许有重复，它对集合中的对象进行索引，Queue 的工作原理是 FCFS 算法(First Come, First Serve)。
+
+首先让我们来看看什么是 HashMap 和 HashSet，然后再来比较它们之间的分别。
+
+## 什么是 HashSet
+HashSet 实现了 Set 接口，它不允许集合中有重复的值，当我们提到 HashSet 时，第一件事情就是在将对象存储在 HashSet 之前，要先确保对象重写 equals()和 hashCode()方法，这样才能比较对象的值是否相等，以确保set中没有储存相等的对象。如果我们没有重写这两个方法，将会使用这个方法的默认实现。
+
+`public boolean add(Object o)`方法用来在 Set 中添加元素，当元素值重复时则会立即返回 false，如果成功添加的话会返回 true。
+
+
+## 什么是 HashMap
+HashMap 实现了 Map 接口，Map 接口对键值对进行映射。Map 中不允许重复的键。Map 接口有两个基本的实现，HashMap 和 TreeMap。TreeMap 保存了对象的排列次序，而 HashMap 则不能。HashMap 允许键和值为 null。HashMap 是非 synchronized 的，但 collection 框架提供方法能保证 HashMap synchronized，这样多个线程同时访问 HashMap 时，能保证只有一个线程更改 Map。
+
+`public Object put(Object Key,Object value)`方法用来将元素添加到 map 中。
+
+HashSet 和 HashMap 的区别
+|**HashMap**|**HashSet**|
+|:---------:|:---------:|
+|HashMap实现了Map接口|HashSet实现了Set接口|
+|使用put()方法将元素放入map中|使用add()方法将元素放入set中|
+|HashMap中使用键对象来计算hashcode值|HashSet使用成员对象来计算hashcode值，对于两个对象来说hashcode可能相同，所以equals()方法用来判断对象的相等性，如果两个对象不同的话，那么返回false|
+|HashMap比较快，因为是使用唯一的键来获取对象|HashSet较HashMap来说比较慢|
