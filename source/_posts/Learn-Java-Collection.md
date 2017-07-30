@@ -1880,6 +1880,7 @@ HashMap 实现了 Map 接口，Map 接口对键值对进行映射。Map 中不�
 `public Object put(Object Key,Object value)`方法用来将元素添加到 map 中。
 
 HashSet 和 HashMap 的区别
+
 |**HashMap**|**HashSet**|
 |:---------:|:---------:|
 |HashMap实现了Map接口|HashSet实现了Set接口|
