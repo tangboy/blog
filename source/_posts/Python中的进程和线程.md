@@ -2,9 +2,9 @@
 title: Python中的进程和线程
 date: 2017-08-05 15:50:22
 tags:
-    -- Python
-    -- Process
-    -- Thread
+    - Python
+    - Process
+    - Thread
 ---
 
 对于操作系统来说，一个任务就是一个进程（Process），比如打开一个浏览器就是启动一个浏览器进程，打开一个记事本就启动了一个记事本进程，打开两个记事本就启动了两个记事本进程，打开一个Word就启动了一个Word进程。
