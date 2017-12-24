@@ -70,7 +70,9 @@ tag_generator:
     per_page:
 
 plugins:
-    hexo-math
+    - hexo-math
+    - hexo-generator-feed
+    - hexo-generator-sitemap
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
