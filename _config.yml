@@ -7,12 +7,12 @@ title: Anthon
 subtitle: 大数据、机器学习、读书
 description: 机器学习，编程，玩
 author: Anthon
-language: en
+language: zh-cn
 timezone: Asia/Shanghai
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://code-kid.com
+url: http://code-monkey.top
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -79,19 +79,16 @@ tag_generator:
   per_page:
 
 plugins: hexo-math
+math:
+  engine: 'mathjax' # or 'katex'
+  mathjax:
+    src: "//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    config:
+
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: suka
-suka_theme:
-  search:
-    enable: true
-    path: search.json
-    field: post # Page | Post | All. Default post
-  prism:
-    enable: false
-    line_number: true
-    theme: default
+theme: even
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
