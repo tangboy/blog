@@ -15,6 +15,8 @@ tags:
 分别使用count distinct 和 count group by对 bigint, macaddr, text三种类型的字段做查询。
 首先创建如下结构的表
 
+<!--more-->
+
 |Column|Type|Modifiers|
 |---|---|---|
 |mac_bigint| bignit||
