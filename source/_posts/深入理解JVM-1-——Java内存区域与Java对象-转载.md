@@ -40,6 +40,8 @@ Java虚拟机规范中对这个区域规定了两种异常状况：
 - **StackOverflowError：**线程请求的栈深度大于虚拟机所允许的深度，将会抛出此异常。
 - **OutOfMemoryError：**当可动态扩展的虚拟机栈在扩展时无法申请到足够的内存，就会抛出该异常。
 
+<!--more-->
+
 ## 本地方法栈（Native Method Stack）
 
 本地方法栈（Native Method Stack）与Java虚拟机栈作用很相似，它们的区别在于虚拟机栈为虚拟机执行Java方法（即字节码）服务，而本地方法栈则为虚拟机使用到的Native方法服务。

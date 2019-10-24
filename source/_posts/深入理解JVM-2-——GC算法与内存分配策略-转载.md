@@ -62,6 +62,7 @@ public class ReferenceCountingGC {
 
 而事实上执行这段代码，objA和objB是可以被回收的，下面一节将介绍JVM实际使用的存活判定算法。
 
+<!--more-->
 
 ## 可达性分析算法
 
